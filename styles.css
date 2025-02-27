@@ -153,6 +153,9 @@ button:disabled {
     font-weight: bold;
     position: absolute;
     top: -10px;
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
 }
 
 .message.ai.left .avatar {
@@ -280,4 +283,62 @@ button:disabled {
     padding: 8px;
     border: 1px solid #ddd;
     border-radius: 4px;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.action-buttons button {
+    background-color: #ecf0f1;
+    color: #2c3e50;
+    padding: 8px 15px;
+    font-size: 14px;
+}
+
+.action-buttons button:hover {
+    background-color: #d5dbdb;
+}
+
+.username-container {
+    margin: 15px 0;
+}
+
+.username-container label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.username-container input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.username-display {
+    font-size: 14px;
+    color: #7f8c8d;
+    margin-top: 10px;
+    text-align: right;
+}
+
+.edit-username {
+    background: none;
+    border: none;
+    color: #3498db;
+    cursor: pointer;
+    font-size: 12px;
+    text-decoration: underline;
+    padding: 0;
+    margin-left: 5px;
+}
+
+.edit-username:hover {
+    color: #2980b9;
+    background: none;
 }
