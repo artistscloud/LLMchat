@@ -1,0 +1,283 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: #f5f7fa;
+    color: #333;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #2c3e50;
+}
+
+h2 {
+    color: #3498db;
+    margin-bottom: 15px;
+}
+
+.setup-section, .chat-section {
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.llm-selection {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.llm-selection label {
+    display: flex;
+    align-items: center;
+    padding: 10px 15px;
+    background-color: #f1f1f1;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.llm-selection label:hover {
+    background-color: #e0e0e0;
+}
+
+.llm-selection input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+.topic-input {
+    margin: 20px 0;
+}
+
+.topic-input label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.topic-input input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.2s;
+}
+
+button:hover {
+    background-color: #2980b9;
+}
+
+button:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+}
+
+.chat-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+#chat-container {
+    height: 500px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+    background-color: #f9f9f9;
+}
+
+.message {
+    margin-bottom: 15px;
+    padding: 10px 15px;
+    border-radius: 8px;
+    max-width: 80%;
+    position: relative;
+}
+
+.message.user {
+    background-color: #3498db;
+    color: white;
+    margin-left: auto;
+}
+
+.message.ai {
+    background-color: #f1f1f1;
+    position: relative;
+}
+
+.message.ai.left {
+    margin-right: auto;
+    margin-left: 20px;
+}
+
+.message.ai.right {
+    margin-left: auto;
+    margin-right: 20px;
+}
+
+.message .avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    position: absolute;
+    top: -10px;
+}
+
+.message.ai.left .avatar {
+    left: -10px;
+}
+
+.message.ai.right .avatar {
+    right: -10px;
+}
+
+.message .avatar.ChatGPT {
+    background-color: #10a37f;
+    color: white;
+}
+
+.message .avatar.Claude {
+    background-color: #5436da;
+    color: white;
+}
+
+.message .avatar.Gemini {
+    background-color: #4285f4;
+    color: white;
+}
+
+.message .avatar.Groq {
+    background-color: #ff5733;
+    color: white;
+}
+
+.message .avatar.Grok {
+    background-color: #8e44ad;
+    color: white;
+}
+
+.message .avatar.Llama {
+    background-color: #2ecc71;
+    color: white;
+}
+
+.message .avatar.Mistral {
+    background-color: #3498db;
+    color: white;
+}
+
+.message .avatar.custom {
+    background-color: #f39c12;
+    color: white;
+}
+
+.message-text {
+    margin-left: 10px;
+}
+
+.user-input-container {
+    display: flex;
+    margin-top: 15px;
+    gap: 10px;
+}
+
+.user-input-container input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.user-input-container button {
+    padding: 10px 15px;
+}
+
+@keyframes thinking {
+    0% { opacity: 0.5; }
+    50% { opacity: 1; }
+    100% { opacity: 0.5; }
+}
+
+.thinking {
+    font-style: italic;
+    color: #7f8c8d;
+    animation: thinking 1.5s infinite;
+}
+
+.modal {
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 500px;
+}
+
+.close {
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
