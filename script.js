@@ -14,6 +14,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveCustomLlmBtn = document.getElementById('save-custom-llm');
     const userMessageInput = document.getElementById('user-message-input');
     const sendMessageBtn = document.getElementById('send-message-btn');
+    const usernameDisplay = document.getElementById('username-display');
+    const editUsernameBtn = document.getElementById('edit-username');
+    const downloadChatBtn = document.getElementById('download-chat');
+
+    // Check if all DOM elements are properly loaded
+    const requiredElements = {
+        llmCheckboxes, topicInput, startChatBtn, pauseResumeBtn, addLlmBtn, 
+        restartBtn, setupSection, chatSection, chatContainer, modal, 
+        closeModal, saveCustomLlmBtn, userMessageInput, sendMessageBtn, 
+        usernameDisplay, editUsernameBtn, downloadChatBtn
+    };
+    
+    // Log any missing elements
+    for (const [name, element] of Object.entries(requiredElements)) {
+        if (!element || (element instanceof NodeList && element.length === 0)) {
+            console.error(`Required element not found: ${name}`);
+        }
+    }
 
     // App State
     let state = {
@@ -26,7 +44,8 @@ document.addEventListener('DOMContentLoaded', () => {
         speakingOrder: [],
         currentSpeakerIndex: 0,
         responseTimeout: null,
-        userCanInteract: true
+        userCanInteract: true,
+        username: 'User'
     };
 
     // LLM Personalities (used to instruct the AI models)
@@ -38,6 +57,18 @@ document.addEventListener('DOMContentLoaded', () => {
         Grok: "You are Grok, developed by xAI. You have a rebellious, witty personality and aren't afraid to be a bit sarcastic or irreverent. You try to tackle questions with a unique perspective. Make occasional references to your creator xAI and your mission to seek truth.",
         Llama: "You are Llama, created by Meta. You are versatile and adaptable with a friendly, approachable tone. Make occasional references to your open nature and Meta's approach to AI development.",
         Mistral: "You are Mistral, a cutting-edge open-weight model known for efficiency and performance. You provide balanced, thoughtful responses with an elegant tone. Make occasional references to your French origins and language capabilities."
+    };
+
+    // LLM Logos as base64 data
+    const llmLogos = {
+        ChatGPT: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTIyLjIgOS4yYy4yLTEuNi0uNS0zLjEtMS43LTRhNy4yIDcuMiAwIDAwLTYuNC01LjEgNi4xIDYuMSAwIDAwLTUuNCAxLjlINi4zYTYuMyA2LjMgMCAwMC01LjMgNiA2LjMgNi4zIDAgMDAyLjIgNS43IDYuMSA2LjEgMCAwMC0uOSA1QTYuMSA2LjEgMCAwMDUuMiAyMmE2LjEgNi4xIDAgMDA0LjEgMS43IDYuMyA2LjMgMCAwMDUuMy0zLjdoMmE2LjMgNi4zIDAgMDA1LjQtMy42IDYuMyA2LjMgMCAwMC4xLTcuM3ptLTExIDExLjNhNC43IDQuNyAwIDAxLTMuMy0xLjMgNC44IDQuOCAwIDAxLTEuOS01LjMgNC45IDQuOSAwIDAxNC40LTMuNWg1LjRhNy40IDcuNCAwIDAwLjYgNi4xIDcuNCg3LjQgMCAwMDQuOCA0LjJjLTEuNSAxLjktMy43IDIuMS02IDAtLjYgMS4yLTIuMiAxLjktNCAxLjl6bTkuOC01LjVhNS4xIDUuMSAwIDAxLTMuMS42IDUuNiA1LjYgMCAwMS0zLjgtMy4yIDUuNSA1LjUgMCAwMS0uMy00LjlINy43YTQuNyA0LjcgMCAwMTQuNy00LjlBNC45IDQuOSAwIDAxMTYuOSA3YzAgMS41LS42IDIuOS0xLjcgMy45LS4zLjMtLjIuOC4yLjlhMi4zIDIuMyAwIDAwMi42LS4yYzEtLjkgMS41LTIuMiAxLjQtMy41YTQuOCA0LjggMCAwMC0xLjQtMy4zYzEuOSAyLjQgMS45IDYtLjUgOC4yeiIvPjwvc3ZnPg==",
+        Claude: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTEyIDIyYTEwIDEwIDAgMTEwLTIwIDEwIDEwIDAgMDEwIDIwem0wLTE4YTggOCAwIDEwMCAxNiA4IDggMCAwMDAtMTZ6bTAgNGE0IDQgMCAxMTAgOCA0IDQgMCAwMTAtOHptMCAyYTIgMiAwIDEwMCA0IDIgMiAwIDAwMC00eiIvPjwvc3ZnPg==",
+        Gemini: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTE5LjQgMTMuN2wxLjggMi43Yy4zLjMtLjMgMy4zLS4zIDUuMy0uM2wxLjctMi43Yy4zLS4zLjMtMS4zLS4zLTIuMy0uM2wtMS43IDIuN2MtLjMgMy4zLS40IDYuMy0uNyA5LjJjLS4zIDMuOS0uNiA3LjUtMS41IDEwLjUtLjkgMi43LTEuNyA1LjUtMi45IDguMi0uMyAxLjYtLjUgMy4zLS43IDUuMi0xLjEgNi45LTEuNyA3LjUtMi45IDguMmMtMS43IDUuNS0zLjQgMTAuMy00LjcgMTQuNy0uOCA0LjUtMS41IDguMy0yLjUgMTEuNy0zLjggMTQuNy0uOCA0LjUtMS41IDguMy0yLjUgMTEuNy0zLjggMTQuNy0xLjQgNC41LTMuMSA4LjMtNS4zIDExLjctNy44IDE0LjctMS40IDQuNS0zLjEgOC4zLTUuMyAxMS43LTcuOCAxNC43eiIvPjwvc3ZnPg==",
+        Groq: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTEyIDJDNi41IDIgMiA2LjUgMiAxMnM0LjUgMTAgMTAgMTAgMTAtNC41IDEwLTEwUzE3LjUgMiAxMiAyek0xMCAxNi41TDUuNSAxMkwxMCA3LjVoOHY5aC04eiIvPjwvc3ZnPg==",
+        Grok: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTEyIDIwbC00LjUtNC41TDEyIDEyLjVsNC41IDQuNUwxMiAyMC43TDE4IDExLjV6Ii8+PC9zdmc+",
+        Llama: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTE1LjYgNC40djQuNEgxOHYyLjNoLTIuNHYzLjZoMi40VjE3aC0yLjR2Mi42SDRWOEg3LjZ2MTMuNUgyMFY0LjRoLTQuNHpNNy42IDQuNFY3SDRWNC40aDMuNnoiLz48L3N2Zz4=",
+        Mistral: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTEwIDExbC00IDQtNC00TTEwIDExIi8+PC9zdmc+",
+        custom: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTExLjUgMjIuM2wxLjItMS4zYy4xLS4xLjItLjMgMS4zLS40LjMtLjMgNC43LS42IDYuNC0xLjYgNC43LS42IDYuNC0xLjYgMS4zLS40IDEuMy0uNCAxLjMtLjQtMS4zLS40TTEyIDIyYTIgMiAwIDAwMiA0aC0yVjExYzAtMS4xLS4xLTIuMS0uNC0zLjJMMTQuNyA2LjRjLS4xLS4xLS4zLS4zLS42LS4zQzExLjcgMyw5LjMgMi44LDYuMSAyLjhoLS41Yy0uNiAwLTEuMSAwLjItMS43LDAuN0w2LjQgNi41Yy0uNSAwLTEuMSAwLjEtMS4zLDAuM2MwLjEgMC4xLDAuMiAwLjIsLDAuMyAwLjNsMS4zIDEuM2MwLjEgMC4xLDAuMiAwLjIsLDAuMyAwLjJ6Ii8+PC9zdmc+"
     };
 
     // Simulated response times (ms)
@@ -75,17 +106,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function addMessageToChat(sender, text, isThinking = false) {
         const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${sender === 'User' ? 'user' : 'ai'}`;
+        messageDiv.className = `message ${sender === state.username ? 'user' : 'ai'}`;
         
         // Alternate sides for AI messages
-        if (sender !== 'User') {
+        if (sender !== state.username) {
             // Count existing AI messages to determine side
             const aiMessageCount = document.querySelectorAll('.message.ai').length;
             messageDiv.classList.add(aiMessageCount % 2 === 0 ? 'left' : 'right');
             
             const avatar = document.createElement('div');
             avatar.className = `avatar ${sender.replace(/\s+/g, '')}`;
-            avatar.textContent = sender.charAt(0);
+            
+            // Use the logo if available, otherwise fallback to first letter
+            const logo = llmLogos[sender];
+            if (logo) {
+                avatar.style.backgroundImage = `url(${logo})`;
+            } else {
+                avatar.textContent = sender.charAt(0);
+            }
+            
             messageDiv.appendChild(avatar);
         }
         
@@ -107,8 +146,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Build the prompt
         let prompt = `${personality}\n\n`;
         prompt += `You are participating in a multi-AI conversation about: ${state.topic}.\n`;
+        prompt += `The user's name is ${state.username}. Always address them by name rather than calling them "User".\n`;
         prompt += `The conversation so far:\n${context}\n`;
-        prompt += `Continue the conversation in your unique voice and perspective. Reference what other AIs and the user have said when appropriate. Keep your response conversational and under 150 words.`;
+        prompt += `Continue the conversation in your unique voice and perspective. Reference what other AIs and ${state.username} have said when appropriate. Keep your response conversational and under 150 words.`;
         
         try {
             let completion;
@@ -213,11 +253,11 @@ document.addEventListener('DOMContentLoaded', () => {
         chatContainer.innerHTML = '';
         
         // Add user's topic as first message
-        addMessageToChat('User', `Let's discuss this topic: ${state.topic}`);
+        addMessageToChat(state.username, `Let's discuss this topic: ${state.topic}`);
         
         // Add to conversation history
         state.conversationHistory.push({
-            sender: 'User',
+            sender: state.username,
             text: `Let's discuss this topic: ${state.topic}`
         });
         
@@ -324,11 +364,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!userMessage || !state.isOngoing || state.isPaused) return;
         
         // Add user message to chat
-        addMessageToChat('User', userMessage);
+        addMessageToChat(state.username, userMessage);
         
         // Add to conversation history
         state.conversationHistory.push({
-            sender: 'User',
+            sender: state.username,
             text: userMessage
         });
         
@@ -337,6 +377,41 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Continue conversation with AI responses
         continueConversation();
+    }
+
+    function downloadChat() {
+        // Create the content for the download
+        let content = `# Multi-LLM Chat - ${state.topic}\n`;
+        content += `# Date: ${new Date().toLocaleString()}\n`;
+        content += `# Participants: ${state.username}, ${state.selectedLLMs.join(', ')}\n\n`;
+        
+        content += state.conversationHistory
+            .map(msg => `${msg.sender}: ${msg.text}`)
+            .join('\n\n');
+        
+        // Create a Blob with the content
+        const blob = new Blob([content], { type: 'text/plain' });
+        
+        // Create a download link
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `chat-${state.topic.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${new Date().toISOString().slice(0, 10)}.txt`;
+        
+        // Trigger the download
+        document.body.appendChild(a);
+        a.click();
+        
+        // Clean up
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+    }
+
+    function changeUsername() {
+        const newUsername = prompt('Enter your name:', state.username);
+        if (newUsername && newUsername.trim()) {
+            state.username = newUsername.trim();
+            usernameDisplay.textContent = `Chatting as: ${state.username}`;
+        }
     }
 
     // Event Listeners
@@ -373,8 +448,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    downloadChatBtn.addEventListener('click', downloadChat);
+    editUsernameBtn.addEventListener('click', changeUsername);
+
     // Initialize
     validateSetup();
     userMessageInput.disabled = true;
     sendMessageBtn.disabled = true;
+    
+    // Make sure usernameDisplay exists before trying to update it
+    if (usernameDisplay) {
+        usernameDisplay.textContent = `Chatting as: ${state.username}`;
+    }
 });
