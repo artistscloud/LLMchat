@@ -1,6 +1,6 @@
 # LLM Chat Arena
 
-A React TypeScript application that allows users to create multi-LLM conversations where different AI models can discuss topics and interact with the user.
+A web application that allows users to create chats with multiple LLMs, provide a topic to discuss, and let the LLMs converse. Users can participate in the conversation and control the flow of the discussion.
 
 ## Features
 

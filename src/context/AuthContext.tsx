@@ -28,6 +28,53 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Check if user is admin
   const isAdmin = profile?.role === 'admin';
 
+  // Check and create admin profile if needed
+  const checkAndCreateAdminProfile = async (userId: string, email: string) => {
+    // Get user profile
+    const { profile: userProfile } = await supabaseService.getUserProfile(userId);
+    
+    if (!userProfile) {
+      // Profile doesn't exist, create it
+      const isAdmin = email === 'mriexinger@gmail.com';
+      const username = isAdmin ? 'admin' : email.split('@')[0];
+      
+      const { error } = await supabaseService.getClient()
+        .from('profiles')
+        .insert([
+          { 
+            id: userId, 
+            username, 
+            email,
+            role: isAdmin ? 'admin' : 'user',
+            created_at: new Date().toISOString()
+          }
+        ]);
+      
+      if (error) {
+        console.error('Error creating profile:', error);
+        return null;
+      }
+      
+      // Get the newly created profile
+      const { profile: newProfile } = await supabaseService.getUserProfile(userId);
+      return newProfile;
+    } else if (email === 'mriexinger@gmail.com' && userProfile.role !== 'admin') {
+      // Update to admin role if needed
+      const { error } = await supabaseService.updateUserProfile(userId, { role: 'admin' });
+      
+      if (error) {
+        console.error('Error updating profile to admin:', error);
+        return userProfile;
+      }
+      
+      // Get the updated profile
+      const { profile: updatedProfile } = await supabaseService.getUserProfile(userId);
+      return updatedProfile;
+    }
+    
+    return userProfile;
+  };
+
   // Initialize auth state
   useEffect(() => {
     const initializeAuth = async () => {
@@ -40,8 +87,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (currentSession?.user) {
         setUser(currentSession.user);
         
-        // Get user profile
-        const { profile: userProfile } = await supabaseService.getUserProfile(currentSession.user.id);
+        // Check and create profile if needed
+        const userProfile = await checkAndCreateAdminProfile(
+          currentSession.user.id,
+          currentSession.user.email || ''
+        );
+        
         setProfile(userProfile);
       }
       
@@ -56,7 +107,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(newSession?.user || null);
       
       if (newSession?.user) {
-        const { profile: userProfile } = await supabaseService.getUserProfile(newSession.user.id);
+        // Check and create profile if needed
+        const userProfile = await checkAndCreateAdminProfile(
+          newSession.user.id,
+          newSession.user.email || ''
+        );
         setProfile(userProfile);
       } else {
         setProfile(null);
@@ -90,6 +145,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     // Create user profile
     if (data.user) {
+      // Check if this is the admin email
+      const isAdmin = email === 'mriexinger@gmail.com';
+      
       const { error: profileError } = await supabaseService.getClient()
         .from('profiles')
         .insert([
@@ -97,7 +155,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             id: data.user.id, 
             username, 
             email,
-            role: 'user',
+            role: isAdmin ? 'admin' : 'user',
             created_at: new Date().toISOString()
           }
         ]);

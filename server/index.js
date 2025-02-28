@@ -191,25 +191,265 @@ class LLMService {
   constructor(supabaseService) {
     this.supabaseService = supabaseService;
     this.personalities = {
-      ChatGPT: "You are ChatGPT, created by OpenAI. You're helpful, creative, and known for your detailed explanations.",
-      Claude: "You are Claude, created by Anthropic. You're thoughtful, nuanced, and careful in your analysis.",
-      Gemini: "You are Gemini, created by Google. You leverage Google's vast knowledge and are especially good at factual information.",
-      Grok: "You are Grok, developed by xAI. You have a rebellious, witty personality and aren't afraid to be a bit sarcastic.",
-      Llama: "You are Llama, created by Meta. You are versatile and adaptable with a friendly, approachable tone.",
-      Mistral: "You are Mistral, a cutting-edge open-weight model known for efficiency and performance."
+      ChatGPT: "You are ChatGPT, created by OpenAI. You're helpful, creative, and known for your detailed explanations. Keep your responses focused on the topic. Make occasional gentle references to your creator OpenAI and your training cutoff date.",
+      Claude: "You are Claude, created by Anthropic. You're thoughtful, nuanced, and careful in your analysis. You emphasize ethical considerations when appropriate. Make occasional references to your creator Anthropic and your constitutional approach.",
+      Gemini: "You are Gemini, created by Google. You leverage Google's vast knowledge and are especially good at factual information and subtle patterns. Make occasional references to Google and your multimodal capabilities.",
+      Grok: "You are Grok, developed by xAI. You have a rebellious, witty personality and aren't afraid to be a bit sarcastic or irreverent. You try to tackle questions with a unique perspective. Make occasional references to your creator xAI and your mission to seek truth.",
+      Llama: "You are Llama, created by Meta. You are versatile and adaptable with a friendly, approachable tone. Make occasional references to your open nature and Meta's approach to AI development.",
+      Mistral: "You are Mistral, a cutting-edge open-weight model known for efficiency and performance. You provide balanced, thoughtful responses with an elegant tone. Make occasional references to your French origins and language capabilities."
+    };
+    
+    this.models = {
+      ChatGPT: {
+        provider: 'openai',
+        modelId: 'gpt-4'
+      },
+      Claude: {
+        provider: 'anthropic',
+        modelId: 'claude-3-opus-20240229'
+      },
+      Gemini: {
+        provider: 'google',
+        modelId: 'gemini-pro'
+      },
+      Grok: {
+        provider: 'openrouter',
+        modelId: 'xai/grok-1'
+      },
+      Mistral: {
+        provider: 'openrouter',
+        modelId: 'mistralai/mistral-large-latest'
+      },
+      Llama: {
+        provider: 'openrouter',
+        modelId: 'meta-llama/llama-3-70b-instruct'
+      }
     };
   }
   
+  // Get API key from database
+  async getApiKey(provider) {
+    try {
+      const { data, error } = await this.supabaseService.client
+        .from('api_keys')
+        .select('key, endpoint')
+        .eq('provider', provider)
+        .eq('active', true)
+        .single();
+      
+      if (error) {
+        logger.error(`Error fetching API key for ${provider}:`, error);
+        return { key: null, endpoint: null };
+      }
+      
+      return { key: data?.key, endpoint: data?.endpoint };
+    } catch (error) {
+      logger.error(`Error in getApiKey for ${provider}:`, error);
+      return { key: null, endpoint: null };
+    }
+  }
+  
+  // Call OpenAI API
+  async callOpenAI(prompt, systemMessage, modelId) {
+    try {
+      const { key } = await this.getApiKey('openai');
+      
+      if (!key) {
+        return { content: '', error: 'OpenAI API key not found' };
+      }
+      
+      const response = await axios.post(
+        'https://api.openai.com/v1/chat/completions',
+        {
+          model: modelId,
+          messages: [
+            { role: 'system', content: systemMessage },
+            { role: 'user', content: prompt }
+          ],
+          max_tokens: 500,
+          temperature: 0.7,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${key}`
+          }
+        }
+      );
+      
+      return { content: response.data.choices[0].message.content, error: null };
+    } catch (error) {
+      logger.error('Error calling OpenAI API:', error);
+      return { 
+        content: '', 
+        error: error.response?.data?.error?.message || error.message || 'Unknown error' 
+      };
+    }
+  }
+  
+  // Call Anthropic API
+  async callAnthropic(prompt, systemMessage, modelId) {
+    try {
+      const { key } = await this.getApiKey('anthropic');
+      
+      if (!key) {
+        return { content: '', error: 'Anthropic API key not found' };
+      }
+      
+      const response = await axios.post(
+        'https://api.anthropic.com/v1/messages',
+        {
+          model: modelId,
+          messages: [
+            { role: 'user', content: prompt }
+          ],
+          system: systemMessage,
+          max_tokens: 500,
+          temperature: 0.7,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': key,
+            'anthropic-version': '2023-06-01'
+          }
+        }
+      );
+      
+      return { content: response.data.content[0].text, error: null };
+    } catch (error) {
+      logger.error('Error calling Anthropic API:', error);
+      return { 
+        content: '', 
+        error: error.response?.data?.error?.message || error.message || 'Unknown error' 
+      };
+    }
+  }
+  
+  // Call Google API
+  async callGoogle(prompt, systemMessage, modelId) {
+    try {
+      const { key } = await this.getApiKey('google');
+      
+      if (!key) {
+        return { content: '', error: 'Google API key not found' };
+      }
+      
+      const response = await axios.post(
+        `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${key}`,
+        {
+          contents: [
+            {
+              parts: [
+                { text: `${systemMessage}\n\n${prompt}` }
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 500,
+          }
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      return { content: response.data.candidates[0].content.parts[0].text, error: null };
+    } catch (error) {
+      logger.error('Error calling Google API:', error);
+      return { 
+        content: '', 
+        error: error.response?.data?.error?.message || error.message || 'Unknown error' 
+      };
+    }
+  }
+  
+  // Call OpenRouter API
+  async callOpenRouter(prompt, systemMessage, modelId) {
+    try {
+      const { key } = await this.getApiKey('openrouter');
+      
+      if (!key) {
+        return { content: '', error: 'OpenRouter API key not found' };
+      }
+      
+      const response = await axios.post(
+        'https://openrouter.ai/api/v1/chat/completions',
+        {
+          model: modelId,
+          messages: [
+            { role: 'system', content: systemMessage },
+            { role: 'user', content: prompt }
+          ],
+          max_tokens: 500,
+          temperature: 0.7,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${key}`,
+            'HTTP-Referer': process.env.CLIENT_URL || 'http://localhost:3000',
+            'X-Title': 'LLM Chat Arena'
+          }
+        }
+      );
+      
+      return { content: response.data.choices[0].message.content, error: null };
+    } catch (error) {
+      logger.error(`Error calling OpenRouter API:`, error);
+      return { 
+        content: '', 
+        error: error.response?.data?.error?.message || error.message || 'Unknown error' 
+      };
+    }
+  }
+  
+  // Generate response from LLM
   async generateResponse(llm, message, username) {
-    // In a real implementation, this would call the LLM API
-    // For now, we'll simulate a response
+    logger.info(`Generating response from ${llm} for message: ${message.substring(0, 50)}...`);
     
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));
+    const model = this.models[llm];
+    const systemMessage = this.personalities[llm] || '';
     
-    // Generate a placeholder response
-    const personality = this.personalities[llm] || '';
-    return `${personality} This is a simulated response from ${llm} to ${username}'s message: "${message}"`;
+    if (!model) {
+      logger.error(`Unknown LLM: ${llm}`);
+      return `I'm sorry, but ${llm} is not available at the moment.`;
+    }
+    
+    try {
+      let result;
+      
+      switch (model.provider) {
+        case 'openai':
+          result = await this.callOpenAI(message, systemMessage, model.modelId);
+          break;
+        case 'anthropic':
+          result = await this.callAnthropic(message, systemMessage, model.modelId);
+          break;
+        case 'google':
+          result = await this.callGoogle(message, systemMessage, model.modelId);
+          break;
+        case 'openrouter':
+          result = await this.callOpenRouter(message, systemMessage, model.modelId);
+          break;
+        default:
+          logger.error(`Unsupported provider: ${model.provider}`);
+          return `I'm sorry, but ${llm} is not available at the moment.`;
+      }
+      
+      if (result.error) {
+        logger.error(`Error from ${llm} API:`, result.error);
+        return `I'm sorry, but ${llm} encountered an error: ${result.error}`;
+      }
+      
+      return result.content;
+    } catch (error) {
+      logger.error(`Error generating response from ${llm}:`, error);
+      return `I'm sorry, but ${llm} encountered an error: ${error.message || 'Unknown error'}`;
+    }
   }
 }
 
