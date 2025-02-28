@@ -1,5 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+// Import Tailwind CSS first
+import './tailwind.css';
+// Then import regular CSS
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
