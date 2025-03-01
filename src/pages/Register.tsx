@@ -29,15 +29,23 @@ const Register: React.FC = () => {
     setIsLoading(true);
     
     try {
+      console.log('Register form submitted with email:', email, 'and username:', username);
       const { error: registerError } = await register(email, password, username);
       
       if (registerError) {
+        console.error('Registration error in component:', registerError);
         throw new Error(registerError.message || 'Failed to register');
       }
       
-      // Redirect to dashboard on successful registration
-      navigate('/dashboard');
+      console.log('Registration successful, redirecting to dashboard');
+      
+      // Add a small delay to allow state updates to complete
+      setTimeout(() => {
+        // Redirect to dashboard on successful registration
+        navigate('/dashboard');
+      }, 500);
     } catch (err: any) {
+      console.error('Registration error caught:', err);
       setError(err.message || 'An error occurred during registration');
     } finally {
       setIsLoading(false);

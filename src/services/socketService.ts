@@ -46,15 +46,36 @@ class SocketService {
       throw new Error('User must be authenticated to connect to socket');
     }
 
+    // Determine the correct socket URL based on the environment
+    let effectiveUrl = serverUrl;
+    
+    // Check if we're running in GitHub Codespaces or similar environment
+    const isGitHubCodespace = window.location.hostname.includes('github.dev') || 
+                             window.location.hostname.includes('github.io') ||
+                             window.location.hostname.includes('githubpreview.dev');
+    
+    if (isGitHubCodespace) {
+      // Extract the base URL from the current window location
+      // This ensures we connect to the same domain, avoiding CORS issues
+      const baseUrl = `${window.location.protocol}//${window.location.host}`;
+      console.log('Detected GitHub Codespace environment, using base URL:', baseUrl);
+      effectiveUrl = baseUrl;
+    }
+    
+    console.log('Connecting to socket server at:', effectiveUrl);
+
     // Connect to socket server with auth token
-    this.socket = io(serverUrl, {
+    this.socket = io(effectiveUrl, {
       auth: {
         token: user.id
       },
       transports: ['websocket'],
       reconnection: true,
       reconnectionAttempts: 5,
-      reconnectionDelay: 1000
+      reconnectionDelay: 1000,
+      // Disable path validation to work with GitHub Codespaces
+      path: '/socket.io',
+      secure: window.location.protocol === 'https:'
     });
 
     // Set up event listeners

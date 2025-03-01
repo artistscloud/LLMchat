@@ -60,8 +60,24 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (!user || socketInitialized) return;
       
       try {
-        // In a real app, this would be an environment variable
-        const socketUrl = process.env.REACT_APP_SOCKET_URL || 'http://localhost:3001';
+        // Get socket URL from environment variable or use window location as fallback
+        let socketUrl = process.env.REACT_APP_SOCKET_URL;
+        
+        // If we're in GitHub Codespaces or similar environment, use the current window location
+        const isGitHubCodespace = window.location.hostname.includes('github.dev') || 
+                                 window.location.hostname.includes('github.io') ||
+                                 window.location.hostname.includes('githubpreview.dev');
+        
+        if (isGitHubCodespace) {
+          // Use the current window location as the base URL
+          socketUrl = `${window.location.protocol}//${window.location.host}`;
+          console.log('Detected GitHub Codespace environment, using URL:', socketUrl);
+        } else if (!socketUrl) {
+          // Fallback to localhost if not in Codespaces and no env var
+          socketUrl = 'http://localhost:3002';
+        }
+        
+        console.log('Initializing socket with URL:', socketUrl);
         await socketService.initializeSocket(socketUrl);
         setSocketInitialized(true);
       } catch (error) {
@@ -133,17 +149,54 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!user) return { chatId: null, error: 'User not authenticated' };
     
     setIsLoading(true);
-    const { chat, error } = await supabaseService.createChat(user.id, topic, selectedLLMs);
-    setIsLoading(false);
     
-    if (error || !chat) {
-      return { chatId: null, error };
+    try {
+      // First, verify that the user profile exists
+      const { profile, error: profileError } = await supabaseService.getUserProfile(user.id);
+      
+      if (profileError || !profile) {
+        console.error('User profile not found:', profileError);
+        // Try to create the profile if it doesn't exist
+        const isAdmin = user.email === 'mriexinger@gmail.com';
+        const username = isAdmin ? 'admin' : (user.email?.split('@')[0] || 'user');
+        
+        const { error: createProfileError } = await supabaseService.getClient()
+          .from('profiles')
+          .insert([
+            { 
+              id: user.id, 
+              username, 
+              email: user.email || '',
+              role: isAdmin ? 'admin' : 'user',
+              created_at: new Date().toISOString()
+            }
+          ]);
+        
+        if (createProfileError) {
+          setIsLoading(false);
+          return { chatId: null, error: `Failed to create user profile: ${createProfileError.message}` };
+        }
+      }
+      
+      // Now create the chat
+      const { chat, error } = await supabaseService.createChat(user.id, topic, selectedLLMs);
+      
+      if (error || !chat) {
+        console.error('Failed to create chat:', error);
+        setIsLoading(false);
+        return { chatId: null, error };
+      }
+      
+      // Add to chats list
+      setChats((prev) => [chat, ...prev]);
+      
+      setIsLoading(false);
+      return { chatId: chat.id, error: null };
+    } catch (err) {
+      console.error('Error in createNewChat:', err);
+      setIsLoading(false);
+      return { chatId: null, error: err instanceof Error ? err.message : 'Unknown error occurred' };
     }
-    
-    // Add to chats list
-    setChats((prev) => [chat, ...prev]);
-    
-    return { chatId: chat.id, error: null };
   };
 
   // Load a chat

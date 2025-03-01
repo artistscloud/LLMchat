@@ -23,15 +23,23 @@ const Login: React.FC = () => {
     setIsLoading(true);
     
     try {
+      console.log('Login form submitted with email:', email);
       const { error: loginError } = await login(email, password);
       
       if (loginError) {
+        console.error('Login error in component:', loginError);
         throw new Error(loginError.message || 'Failed to login');
       }
       
-      // Redirect to dashboard on successful login
-      navigate('/dashboard');
+      console.log('Login successful, redirecting to dashboard');
+      
+      // Add a small delay to allow state updates to complete
+      setTimeout(() => {
+        // Redirect to dashboard on successful login
+        navigate('/dashboard');
+      }, 500);
     } catch (err: any) {
+      console.error('Login error caught:', err);
       setError(err.message || 'An error occurred during login');
     } finally {
       setIsLoading(false);

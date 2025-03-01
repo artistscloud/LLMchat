@@ -68,41 +68,122 @@ class SupabaseService {
 
   // Authentication methods
   public async signUp(email: string, password: string) {
-    return await this.client.auth.signUp({
-      email,
-      password,
-    });
+    console.log('Supabase signUp called with email:', email);
+    try {
+      const result = await this.client.auth.signUp({
+        email,
+        password,
+      });
+      
+      if (result.error) {
+        console.error('Supabase signUp error:', result.error);
+      } else {
+        console.log('Supabase signUp successful:', result.data);
+      }
+      
+      return result;
+    } catch (err) {
+      console.error('Unexpected error in signUp:', err);
+      throw err;
+    }
   }
 
   public async signIn(email: string, password: string) {
-    return await this.client.auth.signInWithPassword({
-      email,
-      password,
-    });
+    console.log('Supabase signIn called with email:', email);
+    try {
+      const result = await this.client.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (result.error) {
+        console.error('Supabase signIn error:', result.error);
+      } else {
+        console.log('Supabase signIn successful, user:', result.data.user?.id);
+      }
+      
+      return result;
+    } catch (err) {
+      console.error('Unexpected error in signIn:', err);
+      throw err;
+    }
   }
 
   public async signOut() {
-    return await this.client.auth.signOut();
+    console.log('Supabase signOut called');
+    try {
+      const result = await this.client.auth.signOut();
+      
+      if (result.error) {
+        console.error('Supabase signOut error:', result.error);
+      } else {
+        console.log('Supabase signOut successful');
+      }
+      
+      return result;
+    } catch (err) {
+      console.error('Unexpected error in signOut:', err);
+      throw err;
+    }
   }
 
   public async getCurrentUser() {
-    const { data, error } = await this.client.auth.getUser();
-    return { user: data.user, error };
+    console.log('Supabase getCurrentUser called');
+    try {
+      const { data, error } = await this.client.auth.getUser();
+      
+      if (error) {
+        console.error('Supabase getCurrentUser error:', error);
+      } else {
+        console.log('Supabase getCurrentUser successful, user:', data.user?.id || 'No user');
+      }
+      
+      return { user: data.user, error };
+    } catch (err) {
+      console.error('Unexpected error in getCurrentUser:', err);
+      throw err;
+    }
   }
 
   public async getSession() {
-    const { data, error } = await this.client.auth.getSession();
-    return { session: data.session, error };
+    console.log('Supabase getSession called');
+    try {
+      const { data, error } = await this.client.auth.getSession();
+      
+      if (error) {
+        console.error('Supabase getSession error:', error);
+      } else {
+        console.log('Supabase getSession successful, session:', data.session ? 'Valid session' : 'No session');
+      }
+      
+      return { session: data.session, error };
+    } catch (err) {
+      console.error('Unexpected error in getSession:', err);
+      throw err;
+    }
   }
 
   // User profile methods
   public async getUserProfile(userId: string) {
-    const { data, error } = await this.client
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-    return { profile: data as Profile | null, error };
+    console.log('Supabase getUserProfile called for user ID:', userId);
+    try {
+      const { data, error } = await this.client
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (error) {
+        console.error('Supabase getUserProfile error:', error);
+      } else {
+        console.log('Supabase getUserProfile result:', data ? 'Profile found' : 'No profile found');
+      }
+      
+      return { profile: data as Profile | null, error };
+    } catch (err) {
+      console.error('Unexpected error in getUserProfile:', err);
+      throw err;
+    }
   }
 
   public async updateUserProfile(userId: string, updates: Partial<Profile>) {

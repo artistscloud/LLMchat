@@ -623,8 +623,19 @@ const llmService = new LLMService(supabaseService);
 
 // Initialize Express app
 const app = express();
-app.use(cors());
+
+// Configure CORS with more specific options
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'http://localhost:3001',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+
 app.use(express.json());
+
+// Serve static files from the public directory
+app.use(express.static('public'));
 
 // Create HTTP server
 const server = http.createServer(app);
@@ -632,10 +643,25 @@ const server = http.createServer(app);
 // Initialize Socket.io
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
-    methods: ['GET', 'POST']
-  }
+    // Allow connections from any origin in development
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization']
+  },
+  // Ensure consistent path for Socket.IO
+  path: '/socket.io',
+  // Enable WebSocket transport
+  transports: ['websocket', 'polling'],
+  // Allow upgrading from HTTP to WebSocket
+  allowUpgrades: true,
+  // Set ping timeout and interval for better connection stability
+  pingTimeout: 60000,
+  pingInterval: 25000
 });
+
+// Log when server starts
+logger.info(`Socket.io server configured with path: /socket.io`);
 
 // Initialize chat manager
 const chatManager = new ChatManager(io, supabaseService, llmService);
